@@ -22,21 +22,30 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
         binding.buttonLoad.setOnClickListener {
+            binding.progressBar.isVisible = true
+            binding.buttonLoad.isEnabled = false
+
+            val jobCity = lifecycleScope.launch {
+                val city = loadCity()
+                binding.tvLocation.text = city
+            }
+
+            val jobTemperature = lifecycleScope.launch {
+                val temp = loadTemperature()
+                binding.tvTemperature.text = temp.toString()
+            }
+
+            /**
+             * Запускаем новую корутину, которая дожидается завершения двух дркгх корутин
+             * и отрабатывает код по скрытию лоадера
+             */
             lifecycleScope.launch {
-                loadData()
+                jobCity.join()
+                jobTemperature.join()
+                binding.progressBar.isVisible = false
+                binding.buttonLoad.isEnabled = true
             }
         }
-    }
-
-    private suspend fun loadData() {
-        binding.progressBar.isVisible = true
-        binding.buttonLoad.isEnabled = false
-        val city = loadCity()
-        binding.tvLocation.text = city
-        val temp = loadTemperature(city)
-        binding.tvTemperature.text = temp.toString()
-        binding.progressBar.isVisible = false
-        binding.buttonLoad.isEnabled = true
     }
 
     private suspend fun loadCity(): String {
@@ -45,13 +54,8 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    private suspend fun loadTemperature(city: String): Int {
-        Toast.makeText(
-            this,
-            "Load temperature for city: $city",
-            Toast.LENGTH_SHORT
-        ).show()
-        delay(5000)
+    private suspend fun loadTemperature(): Int {
+        delay(3000)
         return 17
     }
 }
