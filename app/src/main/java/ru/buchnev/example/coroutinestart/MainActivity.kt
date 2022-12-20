@@ -1,13 +1,12 @@
 package ru.buchnev.example.coroutinestart
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import ru.buchnev.example.coroutinestart.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -16,6 +15,11 @@ class MainActivity : AppCompatActivity() {
         ActivityMainBinding.inflate(layoutInflater)
     }
 
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.d("MainActivity", throwable.toString())
+    }
+    private val myScope = CoroutineScope(Dispatchers.Main + SupervisorJob() + exceptionHandler)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
@@ -23,13 +27,13 @@ class MainActivity : AppCompatActivity() {
             binding.progressBar.isVisible = true
             binding.buttonLoad.isEnabled = false
 
-            val deferredCity = lifecycleScope.async {
+            val deferredCity = myScope.async {
                 val city = loadCity()
                 binding.tvLocation.text = city
                 city
             }
 
-            val deferredTemperature = lifecycleScope.async {
+            val deferredTemperature = myScope.async {
                 val temp = loadTemperature()
                 binding.tvTemperature.text = temp.toString()
                 temp
@@ -39,7 +43,8 @@ class MainActivity : AppCompatActivity() {
              * Запускаем новую корутину, которая дожидается завершения двух дркгх корутин
              * и отрабатывает код по скрытию лоадера
              */
-            lifecycleScope.launch {
+            myScope.launch {
+                error()
                 val city = deferredCity.await()
                 val temp = deferredTemperature.await()
                 binding.progressBar.isVisible = false
@@ -51,6 +56,10 @@ class MainActivity : AppCompatActivity() {
                 ).show()
             }
         }
+    }
+
+    private fun error() {
+        throw RuntimeException()
     }
 
     private suspend fun loadCity(): String {
